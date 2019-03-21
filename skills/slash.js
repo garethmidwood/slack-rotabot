@@ -134,7 +134,7 @@ module.exports = function(controller) {
         } else if (rotas[rotaName] != null) {
             if (rotas[rotaName].users.length > 0) {
                 var onRota = getWeekdayRota(rotas[rotaName].users);
-                bot.replyPrivateDelayed(message, onRota + ' is currently active on the *' + rotaName + '* rota');
+                bot.replyPublicDelayed(message, onRota + ' is currently active on the *' + rotaName + '* rota');
             } else {
                 bot.replyPrivateDelayed(message, 'There are no people on the *' + rotaName + '* rota');
             }
@@ -160,7 +160,7 @@ module.exports = function(controller) {
             bot.replyPrivateDelayed(message, 'You must provide a rota name to create, e.g. `/rota create brews`');
         } else {
             rotas[rotaName] = {'pointer': 0, 'users' : []};
-            bot.replyPublicDelayed(message, 'Created empty rota *' + rotaName + '*');
+            bot.replyPrivateDelayed(message, 'Created empty rota *' + rotaName + '*');
             saveRotas(message);
         }
     }
@@ -241,7 +241,7 @@ module.exports = function(controller) {
         var rotaName = getFirstWord(args);
 
         if (Object.keys(rotas).length == 0) {
-            bot.replyPublicDelayed(message, 'There are no existing rotas');
+            bot.replyPrivateDelayed(message, 'There are no existing rotas');
         } else if (rotaName.length == 0) {
             bot.replyPrivateDelayed(message, 'Existing rotas: ' + Object.keys(rotas).join(', '));
         } else if (rotas[rotaName] != null) {
