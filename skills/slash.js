@@ -34,12 +34,12 @@ module.exports = function(controller) {
         case 'delete':
             rotaDelete(bot, message, args);
         break;
-            case 'add':
+        case 'add':
             rotaAdd(bot, message, args);
-            break;
-            case 'remove':
+        break;
+        case 'remove':
             rotaRemove(bot, message, args);
-            break;
+        break;
         case 'list':
             rotaList(bot, message, args);
         break;
@@ -58,8 +58,6 @@ module.exports = function(controller) {
         if (rotaName.length == 0) {
             bot.replyPrivateDelayed(message, 'Please specify which rota you want to lookup, e.g. `/rota brews`');
         } else if (rotas[rotaName] != null) {
-            bot.replyPrivateDelayed(message, rotas[rotaName].users[0]);
-
             if (rotas[rotaName].users.length > 0) {
                 var pointer = rotas[rotaName].pointer;
                 bot.replyPrivateDelayed(message, rotas[rotaName].users[pointer] + ' is currently active on the *' + rotaName + '* rota');
@@ -81,7 +79,7 @@ module.exports = function(controller) {
         if (rotaName.length == 0) {
             bot.replyPrivateDelayed(message, 'You must provide a rota name to create, e.g. `/rota create brews`');
         } else {
-            rotas[rotaName] = {'pointer': 0, 'users' : {}};
+            rotas[rotaName] = {'pointer': 0, 'users' : []};
             bot.replyPublicDelayed(message, 'Created empty rota *' + rotaName + '*');
         }
     }
@@ -112,7 +110,7 @@ module.exports = function(controller) {
                 if (args.length == 0) {
                     bot.replyPrivateDelayed(message, 'You must specify a user to add to the rota, e.g. `/rota add brews @dave`');
                 } else {
-                    rotas[rotaName]['users'][user] = user;
+                    rotas[rotaName]['users'].push(user);
                     bot.replyPrivateDelayed(message, 'Adding *' + user + '* to *' + rotaName + '*');
                 }
             } else {
