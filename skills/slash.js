@@ -7,19 +7,42 @@ module.exports = function(controller) {
 
     var rotas = {};
 
-
-    controller.on('slash_command',function(bot,message) {
-        // we're always going to send an immediate response. 
-        // this means that we must ALWAYS use delayed replies, no immediate ones
-        bot.replyAcknowledge();
-
-        switch (message.command) {
+    function processCommand(bot, message) {
+	switch (message.command) {
             case '/rota':
                 rotaResponse(bot, message);
             break;
             default:
                 bot.replyPrivateDelayed(message, 'Your command cannot be handled by the rota bot');
         }
+    }
+
+    controller.on('slash_command',function(bot,message) {
+        // we're always going to send an immediate response. 
+        // this means that we must ALWAYS use delayed replies, no immediate ones
+        bot.replyAcknowledge();
+
+        var storage_id = message.team_id  + '-rotas';
+
+        controller.storage.teams.get(
+            storage_id,
+            function(err, team_data) {
+                if (err) {
+                        console.log('there was an error loading the team data!');
+			console.error(err);
+
+			bot.replyPrivateDelayed(message, 'There was an error loading your team data');
+                } else {
+			if (team_data.rotas != null) {
+				rotas = team_data.rotas;
+			} else {
+				rotas = {};
+			}
+
+			processCommand(bot, message);
+                }
+            }
+        );
     })
 
 
@@ -81,6 +104,7 @@ module.exports = function(controller) {
         } else {
             rotas[rotaName] = {'pointer': 0, 'users' : []};
             bot.replyPublicDelayed(message, 'Created empty rota *' + rotaName + '*');
+	    saveRotas(message);
         }
     }
 
@@ -92,6 +116,7 @@ module.exports = function(controller) {
         } else if (rotas[rotaName] != null) {
             delete rotas[rotaName];
             bot.replyPrivateDelayed(message, '*' + rotaName + '* has been deleted');
+	    saveRotas(message);
         } else {
             bot.replyPrivateDelayed(message, '*' + rotaName + '* rota could not be found');
         }
@@ -112,6 +137,7 @@ module.exports = function(controller) {
                 } else {
                     rotas[rotaName]['users'].push(user);
                     bot.replyPrivateDelayed(message, 'Adding *' + user + '* to *' + rotaName + '*');
+		    saveRotas(message);
                 }
             } else {
                 bot.replyPrivateDelayed(message, '*' + rotaName + '* rota was not found. Create it with `/rota create ' + rotaName + '`');
@@ -130,9 +156,10 @@ module.exports = function(controller) {
                 
             if (args.length == 0) {
                 bot.replyPrivateDelayed(message, 'You must specify a user to remove from the rota, e.g. `/rota remove brews @dave`');
-            } else if (rotas[rotaName]['users'][user] != null) {
-                delete rotas[rotaName]['users'][user];
+            } else if (rotas[rotaName]['users'].indexOf(user) != -1) {
+                delete rotas[rotaName]['users'][rotas[rotaName]['users'].indexOf(user)];
                 bot.replyPrivateDelayed(message, 'Removed *' + user + '* from *' + rotaName + '*');
+		saveRotas(message);
             } else {
                 bot.replyPrivateDelayed(message, '*' + user + '* is not on the *' + rotaName + '* rota');
             }
@@ -152,10 +179,23 @@ module.exports = function(controller) {
             if (Object.keys(rotas[rotaName]['users']).length == 0) {
                 bot.replyPrivateDelayed(message, '*' + rotaName + '* is empty. Add members by running `/rota add ' + rotaName + ' @dave`');
             } else {
-                bot.replyPrivateDelayed(message, '*' + rotaName + '* rota has the following members: ' + Object.keys(rotas[rotaName]['users']).join(','));
+                bot.replyPrivateDelayed(message, '*' + rotaName + '* rota has the following members: ' + rotas[rotaName]['users'].join(','));
             }
         } else {
             bot.replyPrivateDelayed(message, '*' + rotaName + '* rota was not found. Create it with `/rota create ' + rotaName + '`');
         }
+    }
+
+    function saveRotas(message) {
+	var storage_id = message.team_id  + '-rotas';
+
+        controller.storage.teams.save(
+            {id: storage_id, rotas: rotas},
+            function(err) {
+                if (err) {
+                    console.log('there was an error!'); console.error(err);
+                }
+            }
+        );
     }
 }
