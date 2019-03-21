@@ -40,7 +40,7 @@ module.exports = function(controller) {
 
         var noOfWeekdays = countWeekdaysBetweenDates(a, b);
 
-        var index = noOfWorkingDays % rotaArray.length;
+        var index = noOfWeekdays % rotaArray.length;
 
         return rotaArray[index];
     }
