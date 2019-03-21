@@ -1,14 +1,56 @@
 
 module.exports = function(controller) {
 
+    var rotas = {};
+
+    /*
+     * Returns the first word from a string
+     */
     function getFirstWord(text) {
         return text.match(/^[^\s]+/i) ? text.match(/^[^\s]+/i)[0] : '';
     }
 
-    var rotas = {};
+    /*
+     * Returns the number of weekdays between 2 dates
+     */
+    function countWeekdaysBetweenDates(first, last) {
+        if (first > last) return -1;
 
+        var start = new Date(first.getTime());
+        var end = new Date(last.getTime());
+        var count = 0;
+        
+        while (start <= end) {
+            if (start.getDay() != 0 && start.getDay() != 6) {
+                count++;
+            } 
+
+            start.setDate(start.getDate() + 1);
+        }
+
+        return count;
+    }
+
+    /*
+     * Returns the person on rota based on a Mon - Fri schedule
+     */
+    function getWeekdayRota(rotaArray) {
+        var a = new Date('03/01/2019');
+        var b = new Date();
+
+        var noOfWeekdays = countWeekdaysBetweenDates(a, b);
+
+        var index = noOfWorkingDays % rotaArray.length;
+
+        return rotaArray[index];
+    }
+
+
+    /*
+     * Directs the slash commands to the correct handlers
+     */
     function processCommand(bot, message) {
-	switch (message.command) {
+        switch (message.command) {
             case '/rota':
                 rotaResponse(bot, message);
             break;
@@ -17,6 +59,9 @@ module.exports = function(controller) {
         }
     }
 
+    /*
+     * Loads in the rota data and starts the command processing
+     */
     controller.on('slash_command',function(bot,message) {
         // we're always going to send an immediate response. 
         // this means that we must ALWAYS use delayed replies, no immediate ones
@@ -28,53 +73,59 @@ module.exports = function(controller) {
             storage_id,
             function(err, team_data) {
                 if (err) {
-                        console.log('there was an error loading the team data!');
-			console.error(err);
-
-			bot.replyPrivateDelayed(message, 'There was an error loading your team data');
+                    console.log('there was an error loading the team data!');
+                    console.error(err);
+    
+                    bot.replyPrivateDelayed(message, 'There was an error loading your team data');
                 } else {
-			if (team_data.rotas != null) {
-				rotas = team_data.rotas;
-			} else {
-				rotas = {};
-			}
+                    if (team_data.rotas != null) {
+                        rotas = team_data.rotas;
+                    } else {
+                        rotas = {};
+                    }
 
-			processCommand(bot, message);
+                    processCommand(bot, message);
                 }
             }
         );
     })
 
 
+    /*
+     * Directs rota requests to the correct handler function
+     */
     function rotaResponse(bot, message) {
         var subCommand = getFirstWord(message.text);
         var args = message.text.replace(subCommand, '').trim();
 
         switch(subCommand) {
-        case 'create':
-            rotaCreate(bot, message, args);
-        break;
-        case 'delete':
-            rotaDelete(bot, message, args);
-        break;
-        case 'add':
-            rotaAdd(bot, message, args);
-        break;
-        case 'remove':
-            rotaRemove(bot, message, args);
-        break;
-        case 'list':
-            rotaList(bot, message, args);
-        break;
-        case 'help':
-            rotaHelp(bot, message, args);
-        break;
-        default:
-            rotaWhosOn(bot, message);
-        break;
+            case 'create':
+                rotaCreate(bot, message, args);
+            break;
+            case 'delete':
+                rotaDelete(bot, message, args);
+            break;
+            case 'add':
+                rotaAdd(bot, message, args);
+            break;
+            case 'remove':
+                rotaRemove(bot, message, args);
+            break;
+            case 'list':
+                rotaList(bot, message, args);
+            break;
+            case 'help':
+                rotaHelp(bot, message, args);
+            break;
+            default:
+                rotaWhosOn(bot, message);
+            break;
         }
     }
 
+    /*
+     * Tells the user who's on the rota
+     */
     function rotaWhosOn(bot, message) {
         var rotaName = getFirstWord(message.text);
 
@@ -82,8 +133,8 @@ module.exports = function(controller) {
             bot.replyPrivateDelayed(message, 'Please specify which rota you want to lookup, e.g. `/rota brews`');
         } else if (rotas[rotaName] != null) {
             if (rotas[rotaName].users.length > 0) {
-                var pointer = rotas[rotaName].pointer;
-                bot.replyPrivateDelayed(message, rotas[rotaName].users[pointer] + ' is currently active on the *' + rotaName + '* rota');
+                var onRota = getWeekdayRota(rotas[rotaName].users);
+                bot.replyPrivateDelayed(message, onRota + ' is currently active on the *' + rotaName + '* rota');
             } else {
                 bot.replyPrivateDelayed(message, 'There are no people on the *' + rotaName + '* rota');
             }
@@ -92,10 +143,16 @@ module.exports = function(controller) {
         }
     }
 
+    /*
+     * Returns help text on how to use the bot
+     */
     function rotaHelp(bot, message, args) {
         bot.replyPrivateDelayed(message, 'Need some help eh buddy?!'); 
     }
 
+    /*
+     * Creates a new rota
+     */
     function rotaCreate(bot, message, args) {
         var rotaName = getFirstWord(args);
 
@@ -104,10 +161,13 @@ module.exports = function(controller) {
         } else {
             rotas[rotaName] = {'pointer': 0, 'users' : []};
             bot.replyPublicDelayed(message, 'Created empty rota *' + rotaName + '*');
-	    saveRotas(message);
+            saveRotas(message);
         }
     }
 
+    /*
+     * Deletes a rota
+     */
     function rotaDelete(bot, message, args) {
         var rotaName = getFirstWord(args);
 
@@ -116,34 +176,40 @@ module.exports = function(controller) {
         } else if (rotas[rotaName] != null) {
             delete rotas[rotaName];
             bot.replyPrivateDelayed(message, '*' + rotaName + '* has been deleted');
-	    saveRotas(message);
+            saveRotas(message);
         } else {
             bot.replyPrivateDelayed(message, '*' + rotaName + '* rota could not be found');
         }
     }
 
+    /*
+     * Adds a slack user to a rota
+     */
     function rotaAdd(bot, message, args) {
         var rotaName = getFirstWord(args);
 
-            if (rotaName.length == 0) {
-                bot.replyPrivateDelayed(message, 'You must specify a rota and who you want to add to it. e.g. `/rota add brews @dave`');
-            } else if (rotas[rotaName] != null) {
-                // get the user details
-                var args = args.replace(rotaName, '').trim();       
-                var user = getFirstWord(args);
+        if (rotaName.length == 0) {
+            bot.replyPrivateDelayed(message, 'You must specify a rota and who you want to add to it. e.g. `/rota add brews @dave`');
+        } else if (rotas[rotaName] != null) {
+            // get the user details
+            var args = args.replace(rotaName, '').trim();       
+            var user = getFirstWord(args);
 
-                if (args.length == 0) {
-                    bot.replyPrivateDelayed(message, 'You must specify a user to add to the rota, e.g. `/rota add brews @dave`');
-                } else {
-                    rotas[rotaName]['users'].push(user);
-                    bot.replyPrivateDelayed(message, 'Adding *' + user + '* to *' + rotaName + '*');
-		    saveRotas(message);
-                }
+            if (args.length == 0) {
+                bot.replyPrivateDelayed(message, 'You must specify a user to add to the rota, e.g. `/rota add brews @dave`');
             } else {
-                bot.replyPrivateDelayed(message, '*' + rotaName + '* rota was not found. Create it with `/rota create ' + rotaName + '`');
+                rotas[rotaName]['users'].push(user);
+                bot.replyPrivateDelayed(message, 'Adding *' + user + '* to *' + rotaName + '*');
+                saveRotas(message);
             }
+        } else {
+            bot.replyPrivateDelayed(message, '*' + rotaName + '* rota was not found. Create it with `/rota create ' + rotaName + '`');
+        }
     }
 
+    /*
+     * Removes a slack user from a rota
+     */
     function rotaRemove(bot, message, args) {
         var rotaName = getFirstWord(args);
 
@@ -159,7 +225,7 @@ module.exports = function(controller) {
             } else if (rotas[rotaName]['users'].indexOf(user) != -1) {
                 delete rotas[rotaName]['users'][rotas[rotaName]['users'].indexOf(user)];
                 bot.replyPrivateDelayed(message, 'Removed *' + user + '* from *' + rotaName + '*');
-		saveRotas(message);
+                saveRotas(message);
             } else {
                 bot.replyPrivateDelayed(message, '*' + user + '* is not on the *' + rotaName + '* rota');
             }
@@ -168,6 +234,9 @@ module.exports = function(controller) {
         }
     }
 
+    /*
+     * Lists rotas, or if given a rota name, lists the slack users in the rota
+     */
     function rotaList(bot, message, args) {
         var rotaName = getFirstWord(args);
 
@@ -186,14 +255,18 @@ module.exports = function(controller) {
         }
     }
 
+    /*
+     * Saves rotas to storage
+     */
     function saveRotas(message) {
-	var storage_id = message.team_id  + '-rotas';
+        var storage_id = message.team_id  + '-rotas';
 
         controller.storage.teams.save(
             {id: storage_id, rotas: rotas},
             function(err) {
                 if (err) {
-                    console.log('there was an error!'); console.error(err);
+                    console.log('there was an error!');
+                    console.error(err);
                 }
             }
         );
