@@ -199,6 +199,8 @@ module.exports = function(controller) {
 
             if (args.length == 0) {
                 bot.replyPrivateDelayed(message, 'You must specify a user to add to the rota, e.g. `/rota add brews @dave`');
+            } else if (rotas[rotaName]['users'].indexOf(user) != -1) {
+                bot.replyPrivateDelayed(message, 'User *' + user + '* is already on the *' + rotaName + '* rota');
             } else {
                 rotas[rotaName]['users'].push(user);
                 bot.replyPrivateDelayed(message, 'Adding *' + user + '* to *' + rotaName + '*');
