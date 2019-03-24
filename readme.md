@@ -1,7 +1,8 @@
 # Rotabot for Slack
 
 This bot allows you to setup and manage daily rotas.
-Currently only a daily, weekday rota is are supported.
+
+Currently only a daily, weekday rota is supported.
 
 ### What commands are available?
 * `/rota create [rotaname]` - creates a rota with the given name 
