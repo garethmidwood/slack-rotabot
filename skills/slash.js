@@ -158,6 +158,8 @@ module.exports = function(controller) {
 
         if (rotaName.length == 0) {
             bot.replyPrivateDelayed(message, 'You must provide a rota name to create, e.g. `/rota create brews`');
+        } else if (rotas[rotaName] != null) {
+            bot.replyPrivateDelayed(message, 'There is already a rota named *' + rotaName + '*');
         } else {
             rotas[rotaName] = {'pointer': 0, 'users' : []};
             bot.replyPublicDelayed(message, 'Created empty rota *' + rotaName + '*');
